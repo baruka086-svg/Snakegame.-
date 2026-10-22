@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>संकेतवाणी Snake Game</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;padding:20px;text-align:center;
+ font-family:Arial,sans-serif;color:white;
+ background:linear-gradient(135deg,#071326,#103b68,#064e63);
+ min-height:100vh
+}
+h1{color:#22d3ee;font-size:32px}
+p{color:#cbdcf0}
+.card{
+ max-width:500px;margin:20px auto;padding:20px;
+ background:#102541;border:1px solid #285477;
+ border-radius:22px;box-shadow:0 10px 30px #0005
+}
+canvas{
+ width:100%;max-width:400px;
+ background:#061225;border:2px solid #22d3ee;
+ border-radius:12px;display:block;margin:auto
+}
+.score{color:#ffd84d;font-size:22px;font-weight:bold}
+button{
+ border:0;border-radius:10px;padding:12px 17px;
+ margin:5px;background:#ffd84d;color:#071326;
+ font-size:16px;font-weight:bold;cursor:pointer
+}
+button:hover{background:#22d3ee}
+.controls{
+ display:grid;grid-template-columns:repeat(3,55px);
+ justify-content:center;gap:5px;margin-top:15px
+}
+.controls button{padding:12px 5px;margin:0}
+.up{grid-column:2}.left{grid-column:1}
+.down{grid-column:2}.right{grid-column:3}
+.fruits{font-size:25px;margin:15px}
+</style>
+</head>
+<body>
+
+<h1>🐍 संकेतवाणी</h1>
+<p>हाथों की भाषा, अब हर किसी के लिए</p>
+
+<div class="card">
+ <h2>🌈 Rainbow Snake Game</h2>
+ <div class="score">स्कोर: <span id="score">0</span></div>
+ <div class="fruits">🍎 Apple　🍌 Banana　🥭 Mango</div>
+ <canvas id="game" width="400" height="400"></canvas>
+
+ <button onclick="startGame()">▶ Start</button>
+ <button onclick="pauseGame()">Ⅱ Pause</button>
+ <button onclick="resetGame()">↻ Restart</button>
+
+ <div class="controls">
+  <button class="up" onclick="move(0,-1)">⬆️</button>
+  <button class="left" onclick="move(-1,0)">⬅️</button>
+  <button class="down" onclick="move(0,1)">⬇️</button>
+  <button class="right" onclick="move(1,0)">➡️</button>
+ </div>
+ <p>कीबोर्ड के Arrow Keys से भी खेलें।</p>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const cell=20, total=20;
+
+let snake,fruit,dx,dy,score;
+let timer=null,gameOver=false;
+
+function resetGame(){
+ clearInterval(timer);
+ timer=null;
+ snake=[
+  {x:8,y:10},{x:7,y:10},
+  {x:6,y:10},{x:5,y:10}
+ ];
+ dx=1;dy=0;score=0;gameOver=false;
+ document.getElementById("score").textContent=score;
+ newFruit();
+ draw();
+}
+
+function newFruit(){
+ const types=[
+  {emoji:"🍎",points:10},
+  {emoji:"🍌",points:20},
+  {emoji:"🥭",points:30}
+ ];
+ do{
+  fruit={
+   x:Math.floor(Math.random()*total),
+   y:Math.floor(Math.random()*total),
+   ...types[Math.floor(Math.random()*types.length)]
+  };
+ }while(snake.some(s=>s.x===fruit.x&&s.y===fruit.y));
+}
+
+function startGame(){
+ if(gameOver)resetGame();
+ if(timer)return;
+ timer=setInterval(update,140);
+}
+
+function pauseGame(){
+ clearInterval(timer);
+ timer=null;
+}
+
+function move(x,y){
+ if(x===-dx&&y===-dy)return;
+ dx=x;dy=y;
+ if(!timer&&!gameOver)startGame();
+}
+
+function update(){
+ const head={x:snake[0].x+dx,y:snake[0].y+dy};
+
+ if(head.x<0||head.y<0||head.x>=total||head.y>=total||
+    snake.some((s,i)=>i>0&&s.x===head.x&&s.y===head.y)){
+  clearInterval(timer);timer=null;gameOver=true;
+  draw();
+  ctx.fillStyle="#ffd84d";
+  ctx.font="bold 24px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("GAME OVER!",200,190);
+  ctx.fillStyle="white";
+  ctx.font="16px Arial";
+  ctx.fillText("Restart दबाकर फिर खेलें",200,220);
+  return;
+ }
+
+ snake.unshift(head);
+
+ if(head.x===fruit.x&&head.y===fruit.y){
+  score+=fruit.points;
+  document.getElementById("score").textContent=score;
+  newFruit();
+ }else{
+  snake.pop();
+ }
+ draw();
+}
+
+function draw(){
+ ctx.fillStyle="#061225";
+ ctx.fillRect(0,0,400,400);
+
+ // गेम ग्रिड
+ ctx.strokeStyle="#122943";
+ for(let i=0;i<=400;i+=cell){
+  ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,400);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(400,i);ctx.stroke();
+ }
+
+ // फल
+ ctx.font="24px Arial";
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+ ctx.fillText(fruit.emoji,fruit.x*cell+10,fruit.y*cell+10);
+
+ // तीन रंगों वाला साँप
+ snake.forEach((s,i)=>{
+  const colors=["#2589ff","#22d3ee","#ffd84d"];
+  ctx.fillStyle=colors[i%3];
+  ctx.beginPath();
+  ctx.roundRect(s.x*cell+2,s.y*cell+2,16,16,5);
+  ctx.fill();
+ });
+}
+
+document.addEventListener("keydown",e=>{
+ const keys={
+  ArrowUp:[0,-1],ArrowDown:[0,1],
+  ArrowLeft:[-1,0],ArrowRight:[1,0],
+  w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]
+ };
+ if(keys[e.key]){
+  e.preventDefault();
+  move(...keys[e.key]);
+ }
+ if(e.code==="Space"){
+  e.preventDefault();
+  timer?pauseGame():startGame();
+ }
+});
+
+resetGame();
+</script>
+</body>
+</html>
